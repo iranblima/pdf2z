@@ -2,7 +2,7 @@
 <html lang="pt-BR"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>PDF2Z</title>
 <meta name="claude:viewport-fit-sides" content="cover">
-<meta name="theme-color" content="#0E7466">
+<meta name="theme-color" content="#000d48">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Semi+Condensed:wght@700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -10,22 +10,22 @@
 <style>
 /* Duas ações e a bobina: cabeçalho mínimo, a tira de papel no centro, dois botões fixos embaixo */
 :root{
-  --bg:#E9EEEC; --panel:#F8FAF9; --ink:#14201D; --muted:#5A6A66; --line:#CCD6D2;
-  --accent:#0E7466; --accent-ink:#FFFFFF; --accent-soft:#D5EAE5; --warn:#A4511A; --ok:#2E7D4F;
-  --paper:#FCFCF8; --paper-edge:#DCDCD2; --roll:#BFC6C3; --shadow:rgba(20,32,29,.22);
+  --bg:#ECEEF3; --panel:#F8F9FB; --ink:#121628; --muted:#5A6074; --line:#CDD2DF;
+  --accent:#000d48; --accent-ink:#FFFFFF; --accent-soft:#DDE2F2; --warn:#A4511A; --ok:#2E7D4F;
+  --paper:#FCFCF8; --paper-edge:#DCDCD2; --roll:#C2C6D2; --shadow:rgba(0,13,72,.22);
   --f-display:"Barlow Semi Condensed","Arial Narrow",sans-serif;
   --f-body:"Barlow",system-ui,sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
   --r:12px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
-  --bg:#0F1514; --panel:#162020; --ink:#E2EAE7; --muted:#90A19C; --line:#2A3735;
-  --accent:#3DBFA9; --accent-ink:#06201B; --accent-soft:#183A34; --warn:#E39A62; --ok:#6CC992;
-  --paper:#F2F2EC; --paper-edge:#9DA39F; --roll:#3A4644; --shadow:rgba(0,0,0,.6); color-scheme:dark}}
+  --bg:#0E1018; --panel:#161A26; --ink:#E3E6EF; --muted:#9097AE; --line:#2A3040;
+  --accent:#8FA3F0; --accent-ink:#000d48; --accent-soft:#1A2350; --warn:#E39A62; --ok:#6CC992;
+  --paper:#F2F2EC; --paper-edge:#9DA39F; --roll:#3A4050; --shadow:rgba(0,0,0,.6); color-scheme:dark}}
 :root[data-theme="dark"]{
-  --bg:#0F1514; --panel:#162020; --ink:#E2EAE7; --muted:#90A19C; --line:#2A3735;
-  --accent:#3DBFA9; --accent-ink:#06201B; --accent-soft:#183A34; --warn:#E39A62; --ok:#6CC992;
-  --paper:#F2F2EC; --paper-edge:#9DA39F; --roll:#3A4644; --shadow:rgba(0,0,0,.6); color-scheme:dark}
+  --bg:#0E1018; --panel:#161A26; --ink:#E3E6EF; --muted:#9097AE; --line:#2A3040;
+  --accent:#8FA3F0; --accent-ink:#000d48; --accent-soft:#1A2350; --warn:#E39A62; --ok:#6CC992;
+  --paper:#F2F2EC; --paper-edge:#9DA39F; --roll:#3A4050; --shadow:rgba(0,0,0,.6); color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{background:var(--bg);color:var(--ink)}
@@ -34,7 +34,10 @@ body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset
 .wrap{max-width:560px;margin:0 auto;display:grid;gap:14px;
   padding-block:18px calc(104px + env(safe-area-inset-bottom,0px));
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-header{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+header{display:flex;align-items:flex-start;justify-content:space-between;gap:12px}
+.ttl{display:grid;gap:4px;min-width:0}
+.desc{margin:0;color:var(--muted);font-size:.95rem;line-height:1.35;text-wrap:balance}
+.spec{padding-top:6px}
 h1{font-family:var(--f-display);font-weight:700;font-size:1.7rem;line-height:1;margin:0}
 .spec{font-family:var(--f-mono);font-size:.72rem;color:var(--muted)}
 .file{font-size:.88rem;color:var(--muted);margin:-6px 0 0;overflow-wrap:anywhere}
@@ -76,8 +79,10 @@ h1{font-family:var(--f-display);font-weight:700;font-size:1.7rem;line-height:1;m
 
 <div class="wrap">
   <header>
-    <h1>PDF2Z</h1>
-    <span class="spec">Zebra ZQ520 · 104 mm</span>
+    <div class="ttl">
+      <h1>PDF2Z</h1>
+      <p class="desc">Conversor de PDF para layout de impressão da Zebra ZQ520</p>
+    </div>
   </header>
   <p class="file" id="fileName" hidden></p>
 
