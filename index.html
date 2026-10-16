@@ -653,10 +653,22 @@ function gfa(seg){
     out+=rle(h.slice(0,e))+(e<h.length?',':'')}
   return out;
 }
-function buildZPL(segs,o){
-  const md=(o.dark>=0?'':'')+o.dark;
-  return segs.map((s,i)=>{const tot=s.rb*s.H;const xb=o.media!=='label'&&i<segs.length-1?'^XB':'';
-    return `^XA\n^MTD^MMT^MN${o.media==='label'?'Y':'N'}^PW${s.W}^LL${s.H}^LH0,0^PON^MD${md}^CI28${xb}\n^FO0,0^GFA,${tot},${tot},${s.rb},${gfa(s)}^FS\n^XZ\n`}).join('');
+// Z64: zlib-deflate + base64 + CRC-16 (XMODEM) over the base64 text. Much smaller than ASCII hex for Bluetooth LE.
+const CRCT=(()=>{const t=new Uint16Array(256);for(let i=0;i<256;i++){let c=i<<8;for(let k=0;k<8;k++)c=c&0x8000?((c<<1)^0x1021):(c<<1);t[i]=c&0xffff}return t})();
+function crc16(str){let c=0;for(let i=0;i<str.length;i++)c=((c<<8)^CRCT[((c>>8)^str.charCodeAt(i))&0xff])&0xffff;return c.toString(16).padStart(4,'0')}
+async function z64(seg){
+  if(typeof CompressionStream==='undefined')return null;
+  const buf=await new Response(new Blob([seg.bits]).stream().pipeThrough(new CompressionStream('deflate'))).arrayBuffer();
+  const u=new Uint8Array(buf);let bin='';for(let i=0;i<u.length;i+=0x8000)bin+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));
+  const b=btoa(bin);return ':Z64:'+b+':'+crc16(b);
+}
+async function buildZPL(segs,o){
+  const md=''+o.dark;const parts=[];
+  for(let i=0;i<segs.length;i++){const s=segs[i];const tot=s.rb*s.H;const xb=o.media!=='label'&&i<segs.length-1?'^XB':'';
+    let data=null;try{data=await z64(s)}catch(e){data=null}
+    const acs=gfa(s);if(!data||data.length>acs.length)data=acs;
+    parts.push(`^XA\n^MTD^MMT^MN${o.media==='label'?'Y':'N'}^PW${s.W}^LL${s.H}^LH0,0^PON^MD${md}^CI28${xb}\n^FO0,0^GFA,${tot},${tot},${s.rb},${data}^FS\n^XZ\n`)}
+  return parts.join('');
 }
 
 /* ---------- pipeline ---------- */
@@ -671,7 +683,7 @@ async function rebuild(){
   const boxes=o.mode==='reflow'?layoutReflow(o):layoutImage(o);
   const segs=paginate(boxes,o).map(s=>renderSeg(s,o));
   if(my!==rebuildId)return;
-  S.segs=segs;S.zpl=buildZPL(segs,o);
+  const zpl=await buildZPL(segs,o);if(my!==rebuildId)return;S.segs=segs;S.zpl=zpl;
   drawPreview(segs,o);setBusy('');
   const lenMm=segs.reduce((a,s)=>a+s.H,0)/DPMM;
   $('#stats').innerHTML=`<span><b>${(lenMm/10).toFixed(1).replace('.',',')} cm</b> de papel</span><span><b>${segs.length}</b> ${o.media==='label'?(segs.length>1?'etiquetas':'etiqueta'):(segs.length>1?'trechos':'trecho')}</span><span>ZPL <b>${fmtKB(S.zpl.length)}</b></span>`;
@@ -748,28 +760,32 @@ $('#bWifi').onclick=async()=>{
   catch(e){status(`Não houve resposta de ${ip}. Confira se o celular ou PC está na mesma rede Wi-Fi da impressora.`,'err')}
 };
 const BLE_SVC='38eb4a80-c570-11e3-9507-0002a5d5c51b',BLE_WR='38eb4a82-c570-11e3-9507-0002a5d5c51b';
-let bleChar=null;
+let bleChar=null,bleChunk=512;
 $('#bBle').onclick=async()=>{
-  if(!navigator.bluetooth){status('Este navegador não tem Bluetooth web. Use o Chrome no Android, Windows ou Mac.','err');return}
+  if(!navigator.bluetooth){status(/iPhone|iPad/.test(navigator.userAgent)?'No iPhone, Safari e Chrome não acessam Bluetooth pela web. Use o navegador Bluefy (App Store) ou baixe o PDF de 104 mm.':'Este navegador não acessa Bluetooth pela web. No Android, use o Chrome atualizado.','err');return}
   try{
     if(!bleChar||!bleChar.service.device.gatt.connected){
       status('Escolha a impressora na lista (o nome costuma ser o número de série, como XXZ…).');
       const dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[BLE_SVC]});
       const gatt=await dev.gatt.connect();const svc=await gatt.getPrimaryService(BLE_SVC);bleChar=await svc.getCharacteristic(BLE_WR);
     }
-    const data=new TextEncoder().encode(S.zpl);const CH=180;
-    for(let i=0;i<data.length;i+=CH){
-      const part=data.slice(i,i+CH);
-      if(bleChar.properties.writeWithoutResponse&&bleChar.writeValueWithoutResponse){await bleChar.writeValueWithoutResponse(part);if((i/CH)%8===7)await new Promise(r=>setTimeout(r,25))}
-      else await bleChar.writeValue(part);
-      if((i/CH)%20===0)status(`Enviando por Bluetooth… ${Math.round(i/data.length*100)}%`);
+    const data=new TextEncoder().encode(S.zpl);const t0=Date.now();let i=0,last=0;
+    $('#bBle').disabled=true;
+    while(i<data.length){
+      const part=data.slice(i,i+bleChunk);
+      try{await (bleChar.writeValueWithResponse?bleChar.writeValueWithResponse(part):bleChar.writeValue(part))}
+      catch(err){ // printer refused the chunk size: shrink and retry the same chunk
+        if(bleChunk>20&&i===0){bleChunk=bleChunk>180?180:20;continue}throw err}
+      i+=part.length;
+      if(Date.now()-last>400){last=Date.now();const sec=(Date.now()-t0)/1000,rate=i/Math.max(sec,0.1),left=Math.round((data.length-i)/rate);
+        status(`Enviando por Bluetooth… ${Math.round(i/data.length*100)}%`+(sec>2?` · faltam ~${left}s`:''))}
     }
-    status('Enviado por Bluetooth.','good');
+    status(`Enviado por Bluetooth em ${Math.round((Date.now()-t0)/1000)}s.`,'good');
   }catch(e){
-    bleChar=null;
+    bleChar=null;bleChunk=512;
     if(e&&e.name==='NotFoundError')status('Nenhuma impressora escolhida.','err');
     else status('Falha no Bluetooth: '+(e&&e.message||e)+'. Confira se a impressora está ligada e com Bluetooth LE ativo.','err');
-  }
+  }finally{$('#bBle').disabled=false}
 };
 
 /* ---------- UI wiring ---------- */
