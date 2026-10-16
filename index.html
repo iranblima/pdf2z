@@ -294,7 +294,16 @@ function buildBlocks(pages,o){
         prevBottom=e.r.top;prev=null;prevPage=p.n;continue;
       }
       const l=e.l, scale=l.size/body;
-      const centered=Math.abs((l.x0+l.x1)/2-mid)<CW*0.05&&(l.x1-l.x0)<CW*0.8&&l.x0>L+CW*0.06;
+      // alignment: page-centered, right-aligned, or centered under/over a logo (header blocks)
+      const lcx=(l.x0+l.x1)/2,lw=l.x1-l.x0;let align='left',anchor=0;
+      const besideImg=p.images.some(im=>l.top<im.bottom&&l.bottom>im.top&&l.x0>=im.x1-2); // text sitting to the right of a logo
+      const under=lw<CW*0.6?p.images.find(im=>{const icx=(im.x0+im.x1)/2;return Math.abs(icx-lcx)<Math.max(CW*0.025,(im.x1-im.x0)*0.15)&&l.top>im.top-body*10&&l.top<im.bottom+body*10&&Math.abs(icx-p.w/2)>CW*0.1}):null;
+      if(under){align='anchor';anchor=((under.x0+under.x1)/2-L)/CW}
+      else if(!besideImg&&l.x0>L+CW*0.04&&lw<CW*0.9){
+        if(Math.abs(lcx-mid)<CW*0.025||Math.abs(lcx-p.w/2)<CW*0.025)align='center';
+        else if(Math.abs(l.x1-R)<CW*0.03&&l.x0>L+CW*0.3)align='right';
+      }
+      const centered=align!=='left';
       const isRow=l.cells.length>1;
       if(isRow){
         close();
@@ -310,13 +319,17 @@ function buildBlocks(pages,o){
         else if(dy>lsp*1.45)newPara=true;
         else if(prevShort&&!cur.centered)newPara=true;
         else if(l.x0>prev.x0+body*1.2)newPara=true;
-        else if(centered!==cur.centered)newPara=true;
+        else if(align!==cur.align||Math.abs(anchor-cur.anchor)>0.02)newPara=true;
         else if(l.allBold!==cur.allBold)newPara=true;
       }
       const runs=l.cells[0].runs.map(r=>({...r}));
+      // centered / right / logo-anchored lines keep their own line breaks (headers, titles)
+      let keepLine=false;
+      if(!newPara&&align!=='left'){newPara=true;keepLine=true}
       if(newPara){
-        const gap=!blocks.length?0:(big||(dy!==Infinity&&dy>lsp*2.6))?2:1;
-        cur={type:'para',scale,centered,allBold:l.allBold,runs,gap,bullet:BULLET.test(l.text)};blocks.push(cur);
+        let gap=!blocks.length?0:(big||(dy!==Infinity&&dy>lsp*2.6))?2:1;
+        if(keepLine||(cur&&align!=='left'&&cur.align===align&&Math.abs(anchor-cur.anchor)<=0.02&&dy<=lsp*1.45))gap=0;
+        cur={type:'para',scale,centered,align,anchor,allBold:l.allBold,runs,gap,bullet:BULLET.test(l.text)};blocks.push(cur);
       }else{
         const lr=cur.runs[cur.runs.length-1];
         if(/[a-zà-ú]-$/i.test(lr.t.trimEnd())&&/^[a-zà-ú]/.test(runs[0].t.trimStart())){lr.t=lr.t.trimEnd().slice(0,-1);runs[0].t=runs[0].t.trimStart()}
@@ -360,14 +373,24 @@ function layoutReflow(o){
   const W=o.W,M=o.margin,IW=W-2*M,base=o.size*(W/832)**0.5,fam=FONTS[o.font];
   const boxes=[];
   const gapBox=g=>{if(!boxes.length)return;const h=g===2?Math.round(base*1.3):g===1?Math.round(base*0.5):0;if(h)boxes.push({h,gap:true,draw(){}})};
+  // text centered under a logo: find a shared center that fits the widest line, then use it for text and logo alike
+  const anchors=[];
+  for(const b of blocks){if(b.type!=='para'||b.align!=='anchor')continue;
+    const px=Math.round(base*Math.max(0.85,Math.min(1.7,b.scale)));
+    const w=Math.min(IW,b.runs.reduce((a,r)=>{MC.font=fontStr(px,r.b,r.it,fam);return a+MC.measureText(r.t).width},0));
+    let A=anchors.find(a=>Math.abs(a.rel-b.anchor)<0.03);if(!A){A={rel:b.anchor,w:0};anchors.push(A)}A.w=Math.max(A.w,w)}
+  anchors.forEach(A=>{A.cx=Math.max(M+A.w/2,Math.min(W-M-A.w/2,M+A.rel*IW))});
+  const anchorX=rel=>{const A=anchors.find(a=>Math.abs(a.rel-rel)<0.03);return A?A.cx:null};
   for(const b of blocks){
     if(b.type==='para'){
       const sc=Math.max(0.85,Math.min(1.7,b.scale));const px=Math.round(base*sc);const lh=Math.round(px*1.28);
       gapBox(sc>1.1&&boxes.length?Math.max(b.gap,1)+0.0:b.gap);
       if(sc>1.1&&boxes.length)boxes.push({h:Math.round(base*0.3),gap:true,draw(){}});
-      const lines=wrapRuns(b.runs,px,IW,fam,false);
+      let maxW=IW;
+      if(b.align==='anchor'){const ax=anchorX(b.anchor)??(M+b.anchor*IW),half=Math.min(ax-M,W-M-ax);if(half*2>=IW*0.4)maxW=half*2}
+      const lines=wrapRuns(b.runs,px,maxW,fam,false);
       lines.forEach((ln,i)=>{const just=o.justify&&!b.centered&&i<lines.length-1&&ln.w>IW*0.6;
-        boxes.push({h:lh,draw(ctx,y){ctx.fillStyle='#000';const x=b.centered?M+(IW-ln.w)/2:M;drawToks(ctx,ln,x,y+Math.round(px*1.0),px,fam,just?IW:0)}})});
+        boxes.push({h:lh,draw(ctx,y){ctx.fillStyle='#000';const x=b.align==='center'?M+(IW-ln.w)/2:b.align==='right'?W-M-ln.w:b.align==='anchor'?Math.max(M,Math.min(W-M-ln.w,(anchorX(b.anchor)??(M+b.anchor*IW))-ln.w/2)):M;drawToks(ctx,ln,x,y+Math.round(px*1.0),px,fam,just?IW:0)}})});
     }else if(b.type==='row'){
       const sc=Math.max(0.85,Math.min(1.4,b.scale));const px=Math.round(base*sc);const lh=Math.round(px*1.28);
       gapBox(b.gap);
@@ -386,7 +409,7 @@ function layoutReflow(o){
       let k=IW*o.imgz/b.CW;const minW=Math.min(...b.items.map(i=>i.wPx)),totW=b.items.reduce((a,i)=>a+i.wPx,0);
       if(minW*k<70)k=70/minW;if(totW*k>IW)k=IW/totW;
       const pl=b.items.map(i=>{const ow=Math.round(i.wPx*k),oh=Math.round(i.canvas.height*ow/i.canvas.width);
-        const x=b.items.length===1&&i.wRel>0.7?M+(IW-ow)/2:Math.round(Math.max(M,Math.min(W-M-ow,M+i.cRel*IW-ow/2)));return {i,ow,oh,x,dy:Math.round(i.dy*k)}});
+        const ac=anchorX(i.cRel);const x=b.items.length===1&&i.wRel>0.7?M+(IW-ow)/2:Math.round(Math.max(M,Math.min(W-M-ow,(ac!=null?ac:M+i.cRel*IW)-ow/2)));return {i,ow,oh,x,dy:Math.round(i.dy*k)}});
       pl.sort((a,b)=>a.x-b.x);for(let j=1;j<pl.length;j++){const pr=pl[j-1];if(pl[j].x<pr.x+pr.ow+8)pl[j].x=Math.min(W-M-pl[j].ow,pr.x+pr.ow+8)}
       if(pl.length>1){const mh=Math.max(...pl.map(q=>q.oh));pl.forEach(q=>q.dy=Math.round((mh-q.oh)/2))}
       const H=Math.max(...pl.map(q=>q.dy+q.oh));const x0=Math.min(...pl.map(q=>q.x)),x1=Math.max(...pl.map(q=>q.x+q.ow));
