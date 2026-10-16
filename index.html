@@ -4,281 +4,124 @@
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="theme-color" content="#0E7466">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Semi+Condensed:wght@400;600;700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400;700&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Atkinson+Hyperlegible:wght@400;700&family=Barlow+Semi+Condensed:wght@700&family=Barlow:wght@400;500;600&family=JetBrains+Mono:wght@400&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 <style>
-/* Celular primeiro: a bobina ocupa a tela, barra de ações fixa embaixo, ajustes e impressão em painéis deslizantes; no computador os painéis viram coluna lateral */
+/* Duas ações e a bobina: cabeçalho mínimo, a tira de papel no centro, dois botões fixos embaixo */
 :root{
   --bg:#E9EEEC; --panel:#F8FAF9; --ink:#14201D; --muted:#5A6A66; --line:#CCD6D2;
   --accent:#0E7466; --accent-ink:#FFFFFF; --accent-soft:#D5EAE5; --warn:#A4511A; --ok:#2E7D4F;
-  --paper:#FCFCF8; --paper-edge:#DCDCD2; --roll:#BFC6C3; --scrim:rgba(20,32,29,.18); --shadow:rgba(20,32,29,.22);
+  --paper:#FCFCF8; --paper-edge:#DCDCD2; --roll:#BFC6C3; --shadow:rgba(20,32,29,.22);
   --f-display:"Barlow Semi Condensed","Arial Narrow",sans-serif;
   --f-body:"Barlow",system-ui,sans-serif;
   --f-mono:"JetBrains Mono",ui-monospace,Consolas,monospace;
-  --r:10px; --bar:68px;
+  --r:12px;
 }
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
   --bg:#0F1514; --panel:#162020; --ink:#E2EAE7; --muted:#90A19C; --line:#2A3735;
   --accent:#3DBFA9; --accent-ink:#06201B; --accent-soft:#183A34; --warn:#E39A62; --ok:#6CC992;
-  --paper:#F2F2EC; --paper-edge:#9DA39F; --roll:#3A4644; --scrim:rgba(0,0,0,.4); --shadow:rgba(0,0,0,.6); color-scheme:dark}}
+  --paper:#F2F2EC; --paper-edge:#9DA39F; --roll:#3A4644; --shadow:rgba(0,0,0,.6); color-scheme:dark}}
 :root[data-theme="dark"]{
   --bg:#0F1514; --panel:#162020; --ink:#E2EAE7; --muted:#90A19C; --line:#2A3735;
   --accent:#3DBFA9; --accent-ink:#06201B; --accent-soft:#183A34; --warn:#E39A62; --ok:#6CC992;
-  --paper:#F2F2EC; --paper-edge:#9DA39F; --roll:#3A4644; --scrim:rgba(0,0,0,.4); --shadow:rgba(0,0,0,.6); color-scheme:dark}
+  --paper:#F2F2EC; --paper-edge:#9DA39F; --roll:#3A4644; --shadow:rgba(0,0,0,.6); color-scheme:dark}
 *{box-sizing:border-box}
 [hidden]{display:none!important}
 html,body{background:var(--bg);color:var(--ink)}
 body{font-family:var(--f-body);font-size:16px;line-height:1.45;-webkit-tap-highlight-color:transparent}
-body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--panel)}
-
-/* top bar */
-.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--panel);border-bottom:1px solid var(--line);
-  padding-block:10px;padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
-.top-in{max-width:1180px;margin:0 auto;display:flex;align-items:center;gap:12px}
-h1{font-family:var(--f-display);font-weight:700;font-size:1.45rem;line-height:1.1;margin:0;white-space:nowrap}
-.spec{font-family:var(--f-mono);font-size:.7rem;color:var(--muted)}
-.ttl{display:grid;min-width:0;flex:1}
-.filechip{display:flex;align-items:center;gap:10px;margin-top:2px;min-width:0}
-.file{font-size:.82rem;color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
-
-/* page */
-.page{max-width:1180px;margin:0 auto;padding-block:14px calc(var(--bar) + 28px + env(safe-area-inset-bottom,0px));
-  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));
-  display:grid;grid-template-columns:minmax(0,1fr);gap:16px}
-.bench{display:grid;gap:10px;min-width:0}
-.stats{display:flex;flex-wrap:wrap;gap:4px 16px;font-family:var(--f-mono);font-size:.76rem;color:var(--muted);font-variant-numeric:tabular-nums}
-.stats b{color:var(--ink)}
-.toolbar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
-.zoom{display:flex;gap:6px}
-.zoom button{font:inherit;font-size:.8rem;border:1px solid var(--line);background:var(--panel);color:var(--ink);border-radius:999px;padding:6px 12px;min-height:34px;cursor:pointer}
-.zoom button[aria-pressed="true"]{border-color:var(--accent);color:var(--accent);font-weight:600}
-.stage{overflow-x:auto;padding:4px 0 10px 26px;display:flex;justify-content:center}
-.roll{position:relative;display:grid;justify-items:center}
-.roll::before{content:"";display:block;height:20px;width:calc(var(--pw) + 20px);background:linear-gradient(var(--roll),color-mix(in srgb,var(--roll) 70%,#000 12%));border-radius:10px}
-.strip{position:relative;width:var(--pw);background:var(--paper);box-shadow:0 0 0 1px var(--paper-edge),0 10px 24px -14px var(--shadow);margin-top:-6px;padding-top:6px}
-.ruler{position:absolute;top:6px;bottom:0;left:-24px;width:18px;
-  background:repeating-linear-gradient(to bottom,var(--muted) 0 1px,transparent 1px 100%),repeating-linear-gradient(to bottom,var(--ink) 0 1.5px,transparent 1.5px 100%);
-  background-repeat:repeat-y;background-position:right top,right top;opacity:.5}
-.segbox canvas{display:block;width:var(--pw);height:auto}
-.roll.real .segbox canvas{image-rendering:pixelated}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--bg)}
+.wrap{max-width:560px;margin:0 auto;display:grid;gap:14px;
+  padding-block:18px calc(104px + env(safe-area-inset-bottom,0px));
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+header{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+h1{font-family:var(--f-display);font-weight:700;font-size:1.7rem;line-height:1;margin:0}
+.spec{font-family:var(--f-mono);font-size:.72rem;color:var(--muted)}
+.file{font-size:.88rem;color:var(--muted);margin:-6px 0 0;overflow-wrap:anywhere}
+/* empty state */
+.intro{border:1.5px dashed var(--line);border-radius:var(--r);padding:28px 20px;display:grid;gap:10px;justify-items:center;text-align:center;color:var(--muted)}
+.intro svg{width:120px;height:auto;color:var(--ink);opacity:.8}
+.intro b{color:var(--ink);font-size:1.05rem}
+.intro p{margin:0;max-width:34ch}
+.drop-over .intro,.drop-over .strip{outline:3px dashed var(--accent);outline-offset:6px}
+/* roll preview */
+.roll{display:grid;justify-items:center}
+.roll::before{content:"";display:block;height:20px;width:calc(100% + 16px);max-width:calc(var(--pw) + 16px);background:linear-gradient(var(--roll),color-mix(in srgb,var(--roll) 70%,#000 12%));border-radius:10px}
+.strip{position:relative;width:100%;max-width:var(--pw);background:var(--paper);box-shadow:0 0 0 1px var(--paper-edge),0 10px 24px -14px var(--shadow);margin-top:-6px;padding-top:6px;min-height:120px}
+.segbox canvas{display:block;width:100%;height:auto}
 .cut{height:26px;border-top:1.5px dashed var(--paper-edge);display:flex;align-items:center;justify-content:space-between;padding:0 8px;font-family:var(--f-mono);font-size:.66rem;color:#6d716c}
 .cut:last-child{border-top-style:solid}
 .empty{padding:40px 20px;color:#6d716c;text-align:center;font-size:.9rem}
-.busy{position:absolute;inset:6px 0 auto;padding:10px;text-align:center;font-family:var(--f-mono);font-size:.76rem;color:#2b2f2c;background:color-mix(in srgb,var(--paper) 85%,transparent)}
-
-/* sheets (mobile) */
-.scrim{position:fixed;inset:0;background:var(--scrim);z-index:39;opacity:0;pointer-events:none;transition:opacity .2s}
-.scrim.on{opacity:1;pointer-events:auto}
-.sheet{position:fixed;left:0;right:0;bottom:0;z-index:40;background:var(--panel);border-radius:16px 16px 0 0;box-shadow:0 -12px 32px -12px var(--shadow);
-  max-height:min(62vh,600px);display:grid;grid-template-rows:auto minmax(0,1fr);transform:translateY(105%);transition:transform .24s ease;
-  padding-bottom:env(safe-area-inset-bottom,0px)}
-.sheet.open{transform:none}
-.sheet-h{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px max(16px,env(safe-area-inset-right,0px)) 8px max(16px,env(safe-area-inset-left,0px));border-bottom:1px solid var(--line);position:relative}
-.sheet-h::before{content:"";position:absolute;top:6px;left:50%;width:40px;height:4px;margin-left:-20px;border-radius:2px;background:var(--line)}
-.sheet-h h2{margin:12px 0 4px;font-family:var(--f-display);font-weight:700;font-size:1.2rem}
-.done{font:inherit;font-weight:600;color:var(--accent);background:none;border:0;padding:12px 4px 4px;min-height:44px;cursor:pointer}
-.sheet-b{overflow-y:auto;overscroll-behavior:contain;display:grid;align-content:start}
-.sec{padding:14px max(16px,env(safe-area-inset-right,0px)) 14px max(16px,env(safe-area-inset-left,0px));display:grid;gap:12px;border-top:1px solid var(--line)}
-.sec:first-child{border-top:0}
-.sec h3{margin:0;font-family:var(--f-display);font-weight:600;font-size:.8rem;text-transform:uppercase;letter-spacing:.09em;color:var(--muted)}
-
-/* controls */
-.seg{display:grid;grid-template-columns:1fr 1fr;border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
-.seg button{border:0;background:transparent;color:var(--ink);font:inherit;font-weight:600;padding:10px 6px;min-height:46px;cursor:pointer}
-.seg button+button{border-left:1px solid var(--line)}
-.seg button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
-.hint{font-size:.86rem;color:var(--muted);margin:0}
-.row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px 10px}
-.row label{font-weight:500}
-.row select{max-width:13rem}
-.val{font-family:var(--f-mono);font-size:.78rem;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
-input[type=range]{width:100%;accent-color:var(--accent);grid-column:1/-1;height:32px;margin:0}
-select,input[type=text],input[type=number]{font:inherit;font-size:16px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:9px 10px;min-height:44px;min-width:0}
-.check{display:flex;gap:10px;align-items:center;min-height:40px}
-.check input{accent-color:var(--accent);width:20px;height:20px;flex:none}
-.btns{display:grid;gap:8px}
-.btn{font:inherit;font-weight:600;border-radius:var(--r);padding:12px 14px;min-height:50px;cursor:pointer;border:1px solid var(--line);background:var(--bg);color:var(--ink);text-align:left;display:flex;justify-content:space-between;gap:10px;align-items:center}
-.btn small{font-weight:400;color:var(--muted);font-size:.8rem;text-align:right}
-.btn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.btn.primary small{color:inherit;opacity:.85}
-.btn:disabled{opacity:.45;cursor:not-allowed}
-.ipline{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px}
-.status{font-size:.88rem;min-height:1.3em;margin:0}
-.status.err{color:var(--warn)} .status.good{color:var(--ok)}
-.note{font-size:.86rem;background:var(--accent-soft);border-radius:var(--r);padding:10px 12px;margin:0}
-.note a{color:var(--accent);font-weight:600;overflow-wrap:anywhere}
-details summary{cursor:pointer;font-weight:500;min-height:40px;display:flex;align-items:center}
-textarea{width:100%;height:150px;font-family:var(--f-mono);font-size:.7rem;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:8px;resize:vertical;margin-top:6px}
-.topopen{display:none;min-height:42px;padding:8px 16px}
-.linkbtn{font:inherit;font-size:.85rem;font-weight:600;color:var(--accent);background:none;border:0;padding:6px 0;cursor:pointer;flex:none}
-
-/* bottom action bar */
+.busy{position:absolute;inset:6px 0 auto;padding:12px;text-align:center;font-family:var(--f-mono);font-size:.78rem;color:#2b2f2c;background:color-mix(in srgb,var(--paper) 88%,transparent)}
+/* help panel (no Bluetooth) */
+.help{background:var(--accent-soft);border-radius:var(--r);padding:14px 16px;display:grid;gap:8px;font-size:.92rem}
+.help b{font-size:1rem}
+.help ol{margin:0;padding-left:1.2em;display:grid;gap:4px}
+.help button{font:inherit;font-weight:600;justify-self:start;background:none;border:0;color:var(--accent);padding:6px 0;min-height:40px;cursor:pointer}
+/* bottom bar */
 .bar{position:fixed;left:0;right:0;bottom:0;z-index:35;background:var(--panel);border-top:1px solid var(--line);
-  padding:10px max(12px,env(safe-area-inset-right,0px)) calc(10px + env(safe-area-inset-bottom,0px)) max(12px,env(safe-area-inset-left,0px))}
-.bar-in{max-width:620px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr 1.4fr;gap:8px}
-.bar button{font:inherit;font-weight:600;font-size:.95rem;min-height:48px;border-radius:var(--r);border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:8px;padding:0 8px}
+  padding:12px max(16px,env(safe-area-inset-right,0px)) calc(12px + env(safe-area-inset-bottom,0px)) max(16px,env(safe-area-inset-left,0px))}
+.bar-in{max-width:560px;margin:0 auto;display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.bar button{font:inherit;font-weight:600;font-size:1.05rem;min-height:56px;border-radius:var(--r);border:1px solid var(--line);background:var(--bg);color:var(--ink);cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;padding:0 10px}
 .bar button.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.bar svg{width:20px;height:20px;flex:none}
-.drop-over .strip{outline:3px dashed var(--accent);outline-offset:6px}
-.toast{position:fixed;left:50%;bottom:calc(var(--bar) + 16px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:45;max-width:min(92vw,520px);
-  background:var(--ink);color:var(--bg);padding:10px 14px;border-radius:10px;font-size:.9rem;box-shadow:0 8px 24px -8px var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s}
+.bar button:disabled{opacity:.4;cursor:not-allowed}
+.bar svg{width:22px;height:22px;flex:none}
+.bar button:focus-visible,.help button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.toast{position:fixed;left:50%;bottom:calc(92px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);z-index:45;width:max-content;max-width:min(92vw,520px);
+  background:var(--ink);color:var(--bg);padding:11px 15px;border-radius:10px;font-size:.92rem;box-shadow:0 8px 24px -8px var(--shadow);opacity:0;pointer-events:none;transition:opacity .2s}
 .toast.on{opacity:1}
-.btn:focus-visible,.seg button:focus-visible,.bar button:focus-visible,select:focus-visible,input:focus-visible,.done:focus-visible,.linkbtn:focus-visible,.zoom button:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-
-/* desktop: panels become a side column */
-@media (min-width:900px){
-  .page{grid-template-columns:minmax(0,370px) minmax(0,1fr);gap:24px;align-items:start;padding-bottom:40px}
-  .side{display:grid;gap:16px;position:sticky;top:76px;max-height:calc(100vh - 92px);overflow-y:auto;order:-1}
-  .sheet{position:static;transform:none;max-height:none;border-radius:var(--r);box-shadow:none;border:1px solid var(--line);transition:none;padding-bottom:0}
-  .sheet-h::before,.done{display:none}
-  .sheet-h h2{margin:4px 0}
-  .bar,.scrim,.toast{display:none!important}
-  .topopen{display:flex}
-}
-#printHost{display:none}
-@media print{
-  body{padding:0!important;background:#fff}
-  body::before{display:none}
-  body>*:not(#printHost){display:none!important}
-  #printHost{display:block}
-  #printHost img{display:block;break-after:page;margin:0}
-}
+.toast.err{background:var(--warn);color:#fff}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
 </style>
 
-<header class="top">
-  <div class="top-in">
-    <div class="ttl">
-      <h1>PDF2Z</h1>
-      <div class="filechip"><span class="file" id="fileName">Exemplo: termo-de-entrega.pdf</span></div>
-    </div>
-    <span class="spec" id="specLine">104 mm · 203 dpi</span>
-    <button type="button" class="btn primary topopen" id="topOpen">Abrir PDF</button>
+<div class="wrap">
+  <header>
+    <h1>PDF2Z</h1>
+    <span class="spec">Zebra ZQ520 · 104 mm</span>
+  </header>
+  <p class="file" id="fileName" hidden></p>
+
+  <div class="intro" id="intro">
+    <svg viewBox="0 0 140 90" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linejoin="round" stroke-linecap="round" aria-hidden="true">
+      <rect x="6" y="6" width="44" height="62" rx="3"/><path d="M14 20h28M14 30h28M14 40h20M14 50h26"/>
+      <path d="M60 37h18m-6-6 6 6-6 6"/>
+      <rect x="88" y="4" width="46" height="12" rx="6"/><path d="M93 16v68l4-3 4 3 4-3 4 3 4-3 4 3 4-3 4 3V16"/><path d="M99 30h24M99 40h24M99 50h18M99 60h24"/>
+    </svg>
+    <b>Carregue um PDF em A4</b>
+    <p>O texto é reorganizado na largura da bobina, pronto para a impressora.</p>
   </div>
-</header>
 
-<div class="page">
-  <main class="bench">
-    <div class="toolbar">
-      <div class="stats" id="stats"></div>
-      <div class="zoom" role="group" aria-label="Zoom">
-        <button type="button" id="zFit" aria-pressed="true">Ajustar</button>
-        <button type="button" id="zReal" aria-pressed="false">Real</button>
-      </div>
+  <div class="roll" id="roll" hidden>
+    <div class="strip" id="strip">
+      <div id="out"></div>
+      <div class="busy" id="busy" hidden></div>
     </div>
-    <div class="stage">
-      <div class="roll" id="roll">
-        <div class="strip" id="strip">
-          <div class="ruler" aria-hidden="true"></div>
-          <div id="out"><div class="empty">Carregando…</div></div>
-          <div class="busy" id="busy" hidden></div>
-        </div>
-      </div>
-    </div>
-  </main>
+  </div>
 
-  <aside class="side">
-    <section class="sheet" id="shSet" aria-labelledby="shSetT">
-      <div class="sheet-h"><h2 id="shSetT">Ajustes</h2><button type="button" class="done" data-close>Concluir</button></div>
-      <div class="sheet-b">
-        <div class="sec">
-          <div class="seg" role="group" aria-label="Modo">
-            <button type="button" id="mReflow" aria-pressed="true">Refluir texto</button>
-            <button type="button" id="mImage" aria-pressed="false">Página ajustada</button>
-          </div>
-          <p class="hint" id="modeHint"></p>
-          <div id="optReflow" style="display:grid;gap:12px">
-            <div class="row"><label for="size">Tamanho do texto</label><span class="val" id="sizeV"></span>
-              <input type="range" id="size" min="16" max="44" step="1" value="26"></div>
-            <div class="row"><label for="font">Letra</label>
-              <select id="font">
-                <option value="atk">Atkinson (legível)</option>
-                <option value="bsc">Condensada (economiza papel)</option>
-                <option value="mono">Monoespaçada</option>
-              </select></div>
-            <label class="check"><input type="checkbox" id="justify" checked> Justificar parágrafos</label>
-            <div class="row"><label for="imgz">Tamanho das imagens</label><span class="val" id="imgzV"></span>
-              <input type="range" id="imgz" min="50" max="200" step="10" value="100"></div>
-            <label class="check"><input type="checkbox" id="dropHF" checked> Remover numeração de página</label>
-          </div>
-          <div id="optImage" style="display:none;gap:4px">
-            <label class="check"><input type="checkbox" id="trim" checked> Cortar margens em branco</label>
-            <label class="check"><input type="checkbox" id="collapse" checked> Encurtar espaços vazios</label>
-            <label class="check"><input type="checkbox" id="cols"> Documento em 2 colunas</label>
-          </div>
-        </div>
-        <div class="sec">
-          <h3>Impressão térmica</h3>
-          <div class="row"><label for="thr">Espessura do traço</label><span class="val" id="thrV"></span>
-            <input type="range" id="thr" min="100" max="220" step="5" value="160"></div>
-          <div class="row"><label for="dither">Imagens</label>
-            <select id="dither"><option value="fs">Pontilhado</option><option value="th">Preto e branco</option></select></div>
-          <div class="row"><label for="dark">Escurecimento (^MD)</label><span class="val" id="darkV"></span>
-            <input type="range" id="dark" min="-10" max="10" step="1" value="0"></div>
-        </div>
-        <div class="sec">
-          <h3>Papel</h3>
-          <div class="row"><label for="paper">Largura</label>
-            <select id="paper">
-              <option value="832">104 mm (4")</option>
-              <option value="576">72 mm (3")</option>
-              <option value="448">58 mm</option>
-              <option value="384">48 mm (2")</option>
-            </select></div>
-          <div class="row"><label for="media">Mídia</label>
-            <select id="media"><option value="cont">Bobina contínua</option><option value="label">Etiqueta com espaço</option></select></div>
-          <div class="row" id="labelRow" hidden><label for="labelMm">Altura da etiqueta (mm)</label>
-            <input type="number" id="labelMm" min="20" max="400" value="150" style="width:6.5rem" inputmode="numeric"></div>
-          <div class="row"><label for="margin">Margem lateral</label><span class="val" id="marginV"></span>
-            <input type="range" id="margin" min="0" max="48" step="4" value="12"></div>
-        </div>
-      </div>
-    </section>
-
-    <section class="sheet" id="shPrint" aria-labelledby="shPrintT">
-      <div class="sheet-h"><h2 id="shPrintT">Imprimir</h2><button type="button" class="done" data-close>Fechar</button></div>
-      <div class="sheet-b">
-        <div class="sec">
-          <p class="note" id="frameNote" hidden>Baixe o PDF de 104 mm e imprima pelo app da Zebra no celular, ou baixe o ZPL. Para mandar direto para a impressora (Bluetooth, Wi-Fi ou driver), use a versão completa: <a href="https://iranblima.github.io/bobina-zq520/" target="_blank" rel="noopener">iranblima.github.io/bobina-zq520</a>.</p>
-          <div class="btns">
-            <button class="btn primary" id="bBle" type="button">Enviar por Bluetooth <small>Chrome, BLE</small></button>
-            <button class="btn" id="bPdf" type="button">Baixar PDF 104 mm <small>app Zebra</small></button>
-            <div class="ipline">
-              <input type="text" id="ip" placeholder="IP da impressora (Wi-Fi)" inputmode="decimal" aria-label="IP da impressora">
-              <button class="btn" id="bWifi" type="button">Enviar</button>
-            </div>
-            <button class="btn" id="bDriver" type="button">Imprimir pelo driver <small>Windows</small></button>
-            <button class="btn" id="bZpl" type="button"><span id="zplLabel">Baixar arquivo .zpl</span> <small id="zplSize"></small></button>
-            <button class="btn" id="bPng" type="button">Baixar imagem .png</button>
-            <button class="btn" id="bCopy" type="button">Copiar ZPL</button>
-          </div>
-          <p class="status" id="status" role="status"></p>
-          <details><summary>Ver código ZPL</summary><textarea id="zplOut" readonly spellcheck="false"></textarea></details>
-        </div>
-      </div>
-    </section>
-  </aside>
+  <div class="help" id="help" hidden>
+    <b id="helpTitle">Imprima pelo app da Zebra</b>
+    <ol id="helpSteps">
+      <li>O arquivo <i>.zpl</i> foi salvo em Downloads.</li>
+      <li>Abra o app <i>Zebra Printer Setup Utility</i> e conecte a impressora.</li>
+      <li>Em <i>Files</i>, escolha o arquivo e toque em <i>Send to Printer</i>.</li>
+    </ol>
+    <span id="helpAlt">Para imprimir direto desta página, abra este endereço no navegador <i>Bluefy</i> (App Store).</span>
+    <button type="button" id="bLink">Copiar endereço</button>
+  </div>
 </div>
 
-<div class="scrim" id="scrim"></div>
 <div class="toast" id="toast" role="status" aria-live="polite"></div>
 <nav class="bar" aria-label="Ações">
   <div class="bar-in">
-    <button type="button" id="drop"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg>PDF</button>
-    <button type="button" id="openSet"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Ajustes</button>
-    <button type="button" id="openPrint" class="primary"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg>Imprimir</button>
+    <button type="button" id="bLoad"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5M12 18v-6M9 15l3-3 3 3"/></svg>Carregar PDF</button>
+    <button type="button" id="bPrint" class="primary" disabled><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V3h12v6"/><rect x="3" y="9" width="18" height="8" rx="2"/><path d="M7 14h10v7H7z"/></svg>Imprimir</button>
   </div>
 </nav>
 <input type="file" id="fileIn" accept="application/pdf,.pdf" hidden>
-<div id="printHost"></div>
-<style id="printStyle"></style>
 
 <script>
 (function(){
 "use strict";
-const SAMPLE_B64="JVBERi0xLjMKJZOMi54gUmVwb3J0TGFiIEdlbmVyYXRlZCBQREYgZG9jdW1lbnQgKG9wZW5zb3VyY2UpCjEgMCBvYmoKPDwKL0YxIDIgMCBSIC9GMiA0IDAgUgo+PgplbmRvYmoKMiAwIG9iago8PAovQmFzZUZvbnQgL0hlbHZldGljYSAvRW5jb2RpbmcgL1dpbkFuc2lFbmNvZGluZyAvTmFtZSAvRjEgL1N1YnR5cGUgL1R5cGUxIC9UeXBlIC9Gb250Cj4+CmVuZG9iagozIDAgb2JqCjw8Ci9CaXRzUGVyQ29tcG9uZW50IDggL0NvbG9yU3BhY2UgL0RldmljZUdyYXkgL0ZpbHRlciBbIC9BU0NJSTg1RGVjb2RlIC9GbGF0ZURlY29kZSBdIC9IZWlnaHQgMjQwIC9MZW5ndGggMTI4NyAvU3VidHlwZSAvSW1hZ2UgCiAgL1R5cGUgL1hPYmplY3QgL1dpZHRoIDI0MAo+PgpzdHJlYW0KR2IiMFQ+QWJaPyRxL0xycy8lVFZvKUtESV0xJnVeLzJrVWc4XEUpOCMhanBiKyM+XS8xR15nQzFHYTE6aHBHdCkmYSVHYzpcUExwLT45MF5bIUMsKGUqUCQoLCImU0dhP1psQShsVDFXO21gaT5SVDw8W2VdTmE1PXQrSEk8XnVGLVhzSmdWZWUhSEFgUEljdT1ZVlgoOytyVD8iN3BTdV5kMEQhaWpdQydFK2hVIjMnODxiUz9ZMGdTP3Q5YVNHLyMuWjhrWEtaVE9LbF4tNVs9U0tQXy1OMCl1O0FTPmJwOHAlUXQvT0o2SyhhWCNhTnVGP2lVclQ7aS48OjhGUlRzJF8uW08tXmJONU4rRXVBdUc+XlcsJihFVE8jIlctSEZUb0Jlc15lNERFaFRwYWFmJjREK1gpTHE0QVtuLFczYVoyYUNGKFUtW003PmM+RSVrWERXV09rRlhHYCNcc2ZhbmVfZnRfNXRAUFNbQFlfN21YS2YkUmwlZURALlFNam4qViJFXWgkKVIkRlxoKW5hOmdWckhoTVZDWigxNi5VR01pQU08QF41ZlctaVwqKjI5U0wkVS9uI3FJaXBNVEBwbmVxXGxdc1cnJktwOjIia2o7WzNUXUokUjBIN0MzbipdbEIvaFtlLVh0dU1sNW10V0RrOC9KbGZBQWdlKVchYG4yO1gkXV8yWk9GZW8oM1Q3UTNaaylYbSk7PzZmJENRKCwjQGpoL1c4SFtGY2xUbDVwN2s2U08vcTo5ZTdOYzVyIkRpT0wjOkk2O3NYbTxUajpkKzgpQj4hMl9hTEIwKTRodHUoXiw5Nl8hSWM5YVhtb1Iqbi9JTC5OUnJLLGhoWllxXVtkMl83Y1tlNlszIjZiLDJYPEJvYDJgPXE6OWVtI1BhOyJbdUIyQHM4QXRQaF4/R2BoMiRHb11LOFduTlFBVEtIYVA5OSZic3IiZVNcXjYybWcqSEYsOEcoSHUkQ0hTIl5qUURscWpeazIkJmxmKE9FTkU+anNYRDBaUXU6KWY+JVNNVC1fSy9gPEUlYzVYR14tVHJTSV1vNWJwRFs7aENDKVpZWzlXJVtoI282UkQ3QE4zRHNuYExhRDhLPWMrPS8xbl8zRmdwRmBTMW5ILyxYcDklWlJxMkE6YyljcD9hZWItKGIyYS9OIllQbEsiXXJLcGhZNU5GaW48dSMjaDVvakhrRitVYSQqWCUiUyVGdWVDI2BxJEhyYGkhOS5nSG0jJ11aPiIxclhTNStpPmhlNWNXPD1wb1sjTzZEMF1WLGI9MGNCaWAzXzc3XmA/QVlSbiIpWk5tQGdoQ0pLW0dBMUAhblAmUWs6XFNWUExtaFdXRk40V0llaGlSVUJUaSwrLilbIzo6N2RKYSM8JiRoRDQ6MGgzYiJeYGI5amkxUTdOMj1dXDkkamdsYEtFKnRrK14jZiI0cidUbXItMmstMywvISs+NSRnS1s7UnJaPShnbTQ/SSU3R14rX0RlPzJNJlJqUy9AXW1lZCQ3PCxbYVQiazE/R0pCUktXT0lxOkVcWEo9TUhmY2VuLnVhJElDOUhUJXMpMWgwXTMpUkIkJSVJa1guYTE2aFlaaFEuZVpPb29PaUphKzRFbVtRc1NMZW9bNXEjUWhFR0FZZztSMUk4Mjxaa0hyKlQ5ZGY5JEZMKG0+LE8ySnNpZ2NGKVJAMEoya3JldEgrXCNtRH4+ZW5kc3RyZWFtCmVuZG9iago0IDAgb2JqCjw8Ci9CYXNlRm9udCAvSGVsdmV0aWNhLUJvbGQgL0VuY29kaW5nIC9XaW5BbnNpRW5jb2RpbmcgL05hbWUgL0YyIC9TdWJ0eXBlIC9UeXBlMSAvVHlwZSAvRm9udAo+PgplbmRvYmoKNSAwIG9iago8PAovQ29udGVudHMgOSAwIFIgL01lZGlhQm94IFsgMCAwIDU5NS4yNzU2IDg0MS44ODk4IF0gL1BhcmVudCA4IDAgUiAvUmVzb3VyY2VzIDw8Ci9Gb250IDEgMCBSIC9Qcm9jU2V0IFsgL1BERiAvVGV4dCAvSW1hZ2VCIC9JbWFnZUMgL0ltYWdlSSBdIC9YT2JqZWN0IDw8Ci9Gb3JtWG9iLjA3M2RiMzhiNTgxYjQ4MWQ2NWQzMWU4MjYyOTEwZmQ2IDMgMCBSCj4+Cj4+IC9Sb3RhdGUgMCAvVHJhbnMgPDwKCj4+IAogIC9UeXBlIC9QYWdlCj4+CmVuZG9iago2IDAgb2JqCjw8Ci9QYWdlTW9kZSAvVXNlTm9uZSAvUGFnZXMgOCAwIFIgL1R5cGUgL0NhdGFsb2cKPj4KZW5kb2JqCjcgMCBvYmoKPDwKL0F1dGhvciAoYW5vbnltb3VzKSAvQ3JlYXRpb25EYXRlIChEOjIwMjYxMDE1MjEzMjMzLTAzJzAwJykgL0NyZWF0b3IgKGFub255bW91cykgL0tleXdvcmRzICgpIC9Nb2REYXRlIChEOjIwMjYxMDE1MjEzMjMzLTAzJzAwJykgL1Byb2R1Y2VyIChSZXBvcnRMYWIgUERGIExpYnJhcnkgLSBcKG9wZW5zb3VyY2VcKSkgCiAgL1N1YmplY3QgKHVuc3BlY2lmaWVkKSAvVGl0bGUgKHVudGl0bGVkKSAvVHJhcHBlZCAvRmFsc2UKPj4KZW5kb2JqCjggMCBvYmoKPDwKL0NvdW50IDEgL0tpZHMgWyA1IDAgUiBdIC9UeXBlIC9QYWdlcwo+PgplbmRvYmoKOSAwIG9iago8PAovRmlsdGVyIFsgL0FTQ0lJODVEZWNvZGUgL0ZsYXRlRGVjb2RlIF0gL0xlbmd0aCAxNDU1Cj4+CnN0cmVhbQpHYXQ9KmdNWWIqJjpPOlNiaTxUZ1pKblRRKmhEImYiQSVOL0U+RWlAJFNCYTkoUiIiR0BLY1QkKkUnVm1YXSlcdEpBQD4mMU03MjFjNCNDNHMoTTIiUGxNVkFwaj5ZYTE3MF9HJDZpbCwlRmIuOkZYL0RtKGxxZlJoKjh1SmAkbj4uLFs6bkxFLyVbZ1QuYUpVNS5MaVImdFViZD4iRCd1NklAb10zTiM/TyhmKlFDNEdKXDNJMyIkLyUmYVJoZU1cVmNWLUBvJ1ZCaDw7Sz5gcGwuNixPRXBoUDgqMU9DJXQ/WDhbPjFVcyhWRiNDUU0/YytbMCN1InI8KmNJcGJvLDE2ITBSXURIZ2cvOCpMQT88UXMwLVZkUClNXm1wOVQ5OSZNQE4xIV45WENmPT9JY2c9LzBpWTBtSy5NXEM9aFhmREs7PmVBTkJRYTE9QlZTVSc9REpOSD9vMm51QyVIOkZrZykpJUEsPHVRdS5qPl8maG5MXSJAOEBARD09JmYiVFQnW1hCWikmcE1DPkxRSjlGLGleWmtAKVNLZzVWbkZQdStlX04yPUYsQ0lVaFosX1FBPC9eOUp1RkxTJkVNK04lYkElJTlbdCVwOWpQPmtpMU1ndGBvYkAhPz4wNXVedWtGSi9zMkZTK1x1NzdDW0o2dDJPUl5AaltWIU4rS1w6SD5NVlIsV25dZFpPV1xrcjFuTkYoRUY9ZW1yczI9ZSxgO0thPUVbXVNVKFNbVTldaWFobGklTDYoQiJDXFNCPFlvNGExJjwyOWZDOlkkR2FGO3MhRkdAbUlzM0JPQVhxJzVCUTtYJXE5VzUqKEcsWXFpMFgqNmNLZlVBTF9oN20sdW8yXUdoN1lbbEI2akFDOWBIbUtyLkNVP1NuXGhPQiRGckhLLmlzTTghNG8hS0toUkxPV1puPzNMUzgtLGVmLTNuLyMqaGsuOzFlSFVJSGcmU1pmMUo6ajREUyxnIyxmLC9YITdla0djZDQ/JGhNLjItQW9LZyRKMEpBKlE2IjlbP1loPFQwNV9ZYmZJREQ/SnFeVydZblQxaCVZWjY/ZkBzMDRucWtoRlkzbGpDTW5sW0xWT18mJ0hiYWY7byElQl5oMzc0Zj8jQWQmSmUoJUxxVk9Xc2VLSF8uLTlnOyFzakQ6ay9YKS4+LStSQlRuTlxJVC91Z3I0XTNeI0hxQUZXYkM5WD0sP2AxNihDajRYY0NXXztqRzBaXyxKNDdrZHVKcmBZWnRpa2hsSXA8UD5zS11WWSlsYHFeXDRRNjtKKkciOmpLW15GKUJBOzdnbTg0XlRPYDQ4OWpMTWtyMSYoPz89Yzs7PC5RT0FjW0tYRz1IPjBLQnIxbEBxR15SUDxob1dTR0RjQEkmWXFJQiJdaUltSWZobW0pTjJXW1BYTlNQR0BGXkNeMG9ZM1VcSilrJ29TdEE7dUZRZnRpOypyJU04Y2k0Mj0sWEUoNVJ0S0lzNmAiLCk4WjkoK1xZSlU9UzptTEJwLTlhJGIzP0ddSGYqTDQ/ZCJwWFkicSFURlMsMGVGIj9GZ2o8VEUtRWRuU24nL2oxYT4oc0o1TjA6LFVCaUhbLSk+YlVMc2gmUWRGSGUjITBKQ1w5I01taVspQ0ZRUVcuKVBpV1VXKDA1P0U2cVApLmVWYmxBNmhkaVZRXGRYO2QuKj5xdWkxKEFzbkomRz4oOGg6Qm5cW0gnPEUtYlIzaSxJPFUkWzoyM083SUk4JVFBQ10mKmdMLmdXOi9FUHRiVjFnSERtUF8/W2pHJic+W28qMF1YO2s9PWw5MEA8PHFZa15IWTVQQDRrMlZOIVUtLGFSakRMMk1LX18pT1FrPCdRSVEqX15WUy1Xc11VPGYiXi9xaHAral1KJzJlaSxOQlI/bEk3cEswaWVmTjBGQi07TGpLOyE4I2tTbzZHbGwsfj5lbmRzdHJlYW0KZW5kb2JqCnhyZWYKMCAxMAowMDAwMDAwMDAwIDY1NTM1IGYgCjAwMDAwMDAwNjEgMDAwMDAgbiAKMDAwMDAwMDEwMiAwMDAwMCBuIAowMDAwMDAwMjA5IDAwMDAwIG4gCjAwMDAwMDE2ODggMDAwMDAgbiAKMDAwMDAwMTgwMCAwMDAwMCBuIAowMDAwMDAyMDY2IDAwMDAwIG4gCjAwMDAwMDIxMzQgMDAwMDAgbiAKMDAwMDAwMjM5NSAwMDAwMCBuIAowMDAwMDAyNDU0IDAwMDAwIG4gCnRyYWlsZXIKPDwKL0lEIApbPDMwY2U3NzVlMTliMzYzMjBlMjBkZmFlNzQ4MDQ5ZDkyPjwzMGNlNzc1ZTE5YjM2MzIwZTIwZGZhZTc0ODA0OWQ5Mj5dCiUgUmVwb3J0TGFiIGdlbmVyYXRlZCBQREYgZG9jdW1lbnQgLS0gZGlnZXN0IChvcGVuc291cmNlKQoKL0luZm8gNyAwIFIKL1Jvb3QgNiAwIFIKL1NpemUgMTAKPj4Kc3RhcnR4cmVmCjQwMDAKJSVFT0YK";
 const DPI=203, DPMM=DPI/25.4, RS=2.6; // raster scale for pages (~187 dpi)
 const $=s=>document.querySelector(s);
 const lib=window.pdfjsLib;
@@ -287,15 +130,10 @@ let inFrame=true; try{inFrame=window.top!==window.self}catch(e){inFrame=true}
 const FONTS={atk:'"Atkinson Hyperlegible", Arial, sans-serif',bsc:'"Barlow Semi Condensed", "Arial Narrow", sans-serif',mono:'"JetBrains Mono", "Courier New", monospace'};
 const S={doc:null,name:'',pages:[],mode:'reflow',segs:[],zpl:''};
 
-/* ---------- settings ---------- */
-const ids=['font','size','imgz','justify','dropHF','trim','collapse','cols','dither','thr','paper','media','labelMm','dark','margin','ip'];
-function opt(){
-  return {mode:S.mode,font:$('#font').value,size:+$('#size').value,imgz:+$('#imgz').value/100,justify:$('#justify').checked,dropHF:$('#dropHF').checked,
-    trim:$('#trim').checked,collapse:$('#collapse').checked,cols:$('#cols').checked,dither:$('#dither').value,thr:+$('#thr').value,
-    W:+$('#paper').value,media:$('#media').value,labelMm:Math.max(20,+$('#labelMm').value||150),dark:+$('#dark').value,margin:+$('#margin').value};
-}
-function saveSettings(){try{const o={mode:S.mode};ids.forEach(i=>{const e=$('#'+i);o[i]=e.type==='checkbox'?e.checked:e.value});localStorage.setItem('zq520',JSON.stringify(o))}catch(e){}}
-function loadSettings(){try{const o=JSON.parse(localStorage.getItem('zq520')||'null');if(!o)return;ids.forEach(i=>{const e=$('#'+i);if(!(i in o))return;if(e.type==='checkbox')e.checked=o[i];else e.value=o[i]});if(o.mode)S.mode=o.mode}catch(e){}}
+
+/* ---------- fixed settings ---------- */
+const OPT={mode:'reflow',font:'atk',size:26,imgz:1,justify:true,dropHF:true,trim:true,collapse:true,cols:false,dither:'fs',thr:160,W:832,media:'cont',labelMm:150,dark:0,margin:12};
+function opt(){return OPT}
 
 /* ---------- PDF extraction ---------- */
 async function openPdf(bytes,name){
@@ -672,156 +510,110 @@ async function buildZPL(segs,o){
 }
 
 /* ---------- pipeline ---------- */
-let rebuildTimer=null,rebuildId=0;
-function schedule(){clearTimeout(rebuildTimer);rebuildTimer=setTimeout(rebuild,160)}
+let rebuildId=0;
 async function rebuild(){
   if(!S.pages.length)return;
-  const my=++rebuildId;const o=opt();saveSettings();updateLabels(o);
+  const my=++rebuildId;const o=opt();
   setBusy('Montando a bobina…');
   try{await Promise.all([document.fonts.load(fontStr(20,false,false,FONTS[o.font])),document.fonts.load(fontStr(20,true,false,FONTS[o.font]))])}catch(e){}
   await new Promise(r=>setTimeout(r,10));if(my!==rebuildId)return;
-  const boxes=o.mode==='reflow'?layoutReflow(o):layoutImage(o);
+  const boxes=layoutReflow(o);
   const segs=paginate(boxes,o).map(s=>renderSeg(s,o));
-  if(my!==rebuildId)return;
-  const zpl=await buildZPL(segs,o);if(my!==rebuildId)return;S.segs=segs;S.zpl=zpl;
+  const zpl=await buildZPL(segs,o);if(my!==rebuildId)return;
+  S.segs=segs;S.zpl=zpl;
   drawPreview(segs,o);setBusy('');
-  const lenMm=segs.reduce((a,s)=>a+s.H,0)/DPMM;
-  $('#stats').innerHTML=`<span><b>${(lenMm/10).toFixed(1).replace('.',',')} cm</b> de papel</span><span><b>${segs.length}</b> ${o.media==='label'?(segs.length>1?'etiquetas':'etiqueta'):(segs.length>1?'trechos':'trecho')}</span><span>ZPL <b>${fmtKB(S.zpl.length)}</b></span>`;
-  $('#zplSize').textContent=fmtKB(S.zpl.length);
-  const ta=$('#zplOut');ta.value=S.zpl.length>400000?S.zpl.slice(0,400000)+'\n… (texto truncado na visualização; o arquivo e a cópia levam o ZPL completo)':S.zpl;
+  $('#bPrint').disabled=!segs.length;
 }
-function fmtKB(n){return n<1024?n+' B':(n/1024).toFixed(n<10240?1:0).replace('.',',')+' KB'}
 function drawPreview(segs,o){
-  const out=$('#out');out.innerHTML='';const real=$('#zReal').getAttribute('aria-pressed')==='true';
-  const avail=Math.max(220,($('.stage').clientWidth||600)-32);
-  const pw=real?o.W:Math.min(o.W*0.62,avail,520);
-  const roll=$('#roll');roll.style.setProperty('--pw',pw+'px');roll.classList.toggle('real',real);
-  const pxPerDot=pw/o.W;roll.style.setProperty('--cm',(DPMM*10*pxPerDot)+'px');roll.style.setProperty('--mm5',(DPMM*5*pxPerDot)+'px');
-  $('#strip').querySelector('.ruler').style.backgroundSize=`6px ${DPMM*5*pxPerDot}px, 14px ${DPMM*10*pxPerDot}px`;
+  const out=$('#out');out.innerHTML='';
+  $('#roll').style.setProperty('--pw',Math.round(o.W*0.62)+'px');
   segs.forEach((s,i)=>{
     const box=document.createElement('div');box.className='segbox';
     const c=document.createElement('canvas');c.width=s.W;c.height=s.H;const ctx=c.getContext('2d');const im=ctx.createImageData(s.W,s.H);const d=im.data;
     for(let y=0;y<s.H;y++)for(let x=0;x<s.W;x++){if(s.bits[y*s.rb+(x>>3)]&(0x80>>(x&7))){const k=(y*s.W+x)*4;d[k]=d[k+1]=d[k+2]=18;d[k+3]=255}}
-    ctx.putImageData(im,0,0);box.append(c);
-    const cut=document.createElement('div');cut.className='cut';
-    cut.innerHTML=`<span>${o.media==='label'?'etiqueta':'trecho'} ${i+1}</span><span>${(s.H/DPMM/10).toFixed(1).replace('.',',')} cm${i===segs.length-1?' · destacar':''}</span>`;
-    out.append(box,cut);
+    ctx.putImageData(im,0,0);box.append(c);out.append(box);
   });
-}
-function updateLabels(o){
-  $('#sizeV').textContent=`${o.size} pt ≈ ${(o.size/DPMM).toFixed(1).replace('.',',')} mm`;
-  $('#imgzV').textContent=Math.round(o.imgz*100)+'%';$('#thrV').textContent=o.thr;
-  $('#darkV').textContent=(o.dark>0?'+':'')+o.dark;$('#marginV').textContent=(o.margin/DPMM).toFixed(1).replace('.',',')+' mm';
-  const mm=Math.round(o.W/DPMM);$('#specLine').textContent=`${mm} mm · 203 dpi`;
-  $('#labelRow').hidden=o.media!=='label';
+  const cm=segs.reduce((a,s)=>a+s.H,0)/DPMM/10;
+  const cut=document.createElement('div');cut.className='cut';
+  cut.innerHTML=`<span>${cm.toFixed(1).replace('.',',')} cm de papel</span><span>destacar aqui</span>`;out.append(cut);
 }
 function setBusy(t){const b=$('#busy');b.hidden=!t;b.textContent=t}
-let toastT;function status(t,k){const s=$('#status');s.textContent=t;s.className='status'+(k?' '+k:'');
-  if(t&&!$('#shPrint').classList.contains('open')){const el=$('#toast');el.textContent=t;el.classList.add('on');clearTimeout(toastT);toastT=setTimeout(()=>el.classList.remove('on'),k==='err'?6000:3500)}}
+let toastT;
+function status(t,k){const el=$('#toast');if(!t){el.classList.remove('on');return}
+  el.textContent=t;el.className='toast on'+(k==='err'?' err':'');clearTimeout(toastT);
+  if(!/…/.test(t))toastT=setTimeout(()=>el.classList.remove('on'),k==='err'?7000:4000)}
 
-/* ---------- outputs ---------- */
-function bwCanvas(s){const c=document.createElement('canvas');c.width=s.W;c.height=s.H;const ctx=c.getContext('2d');const im=ctx.createImageData(s.W,s.H);const d=im.data;
-  for(let y=0;y<s.H;y++)for(let x=0;x<s.W;x++){const k=(y*s.W+x)*4;const b=s.bits[y*s.rb+(x>>3)]&(0x80>>(x&7));d[k]=d[k+1]=d[k+2]=b?0:255;d[k+3]=255}
-  ctx.putImageData(im,0,0);return c}
+/* ---------- files ---------- */
 function baseName(){return (S.name||'documento').replace(/\.pdf$/i,'')}
 let DL=null;
 async function download(blob,name){
   if(inFrame){
-    if(!DL){status('Download indisponível nesta visualização.','err');return false}
+    if(!DL){status('Não é possível baixar arquivos nesta visualização.','err');return false}
     try{await DL.save({filename:name,data:blob});return true}
-    catch(e){const c=e&&e.code;status(c==='declined'?'Download cancelado.':c==='rate_limited'?'Já há uma confirmação de download aberta.':'Não foi possível baixar: '+(e&&e.message||c),'err');return false}
+    catch(e){const c=e&&e.code;status(c==='declined'?'Download cancelado.':'Não foi possível baixar: '+(e&&e.message||c),'err');return false}
   }
   const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download=name;document.body.append(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},4000);return true}
-$('#bZpl').onclick=async()=>{if(!S.zpl)return;const nm=baseName()+(inFrame?'-zq520-zpl.txt':'-zq520.zpl');if(await download(new Blob([S.zpl],{type:'text/plain'}),nm))status(inFrame?'ZPL salvo como .txt. Se o app pedir, renomeie para .zpl.':'Arquivo .zpl gerado.','good')};
-$('#bPdf').onclick=async()=>{
-  if(!S.segs.length)return;const J=window.jspdf&&window.jspdf.jsPDF;if(!J){status('O gerador de PDF não carregou. Recarregue a página.','err');return}
-  const wmm=S.segs[0].W/DPMM;let doc=null;
-  S.segs.forEach(s=>{const hmm=s.H/DPMM;const f=[wmm,hmm];const or=hmm>=wmm?'p':'l';
-    if(!doc)doc=new J({unit:'mm',format:f,orientation:or,compress:true});else doc.addPage(f,or);
-    doc.addImage(bwCanvas(s).toDataURL('image/png'),'PNG',0,0,wmm,hmm,undefined,'FAST')});
-  if(await download(doc.output('blob'),baseName()+'-zq520.pdf'))status('PDF salvo. Imprima com escala 100% (tamanho real) e a mídia de '+Math.round(wmm)+' mm.','good')};
-$('#bPng').onclick=async()=>{if(!S.segs.length)return;const tot=S.segs.reduce((a,s)=>a+s.H,0);
-  const c=document.createElement('canvas');c.width=S.segs[0].W;c.height=Math.min(tot,30000);const ctx=c.getContext('2d');let y=0;S.segs.forEach(s=>{if(y<c.height)ctx.drawImage(bwCanvas(s),0,y);y+=s.H});
-  const b=await new Promise(r=>c.toBlob(r));if(await download(b,baseName()+'-zq520.png'))status('Imagem salva em 203 dpi, na largura exata da mídia.','good')};
-$('#bCopy').onclick=async()=>{try{await navigator.clipboard.writeText(S.zpl);status('ZPL copiado.','good')}catch(e){const d=$('details');d.open=true;const ta=$('#zplOut');ta.focus();ta.select();status('Cópia automática bloqueada. O ZPL está selecionado na caixa abaixo: use Ctrl+C.','err')}};
-$('#bDriver').onclick=()=>{
-  if(!S.segs.length)return;const o=opt();const wmm=(o.W/DPMM).toFixed(2);const host=$('#printHost');host.innerHTML='';let css='';
-  S.segs.forEach((s,i)=>{const hmm=(s.H/DPMM).toFixed(2);css+=`@page z${i}{size:${wmm}mm ${hmm}mm;margin:0}#printHost img.z${i}{page:z${i};width:${wmm}mm;height:${hmm}mm}`;
-    const img=new Image();img.className='z'+i;img.src=bwCanvas(s).toDataURL('image/png');host.append(img)});
-  $('#printStyle').textContent=css;setTimeout(()=>window.print(),120);
-  status('Na janela de impressão, escolha o driver ZDesigner ZQ520, escala 100% e margens nenhuma.','')
-};
-$('#bWifi').onclick=async()=>{
-  const ip=$('#ip').value.trim();if(!/^[\w.\-:]+$/.test(ip)){status('Digite o IP da impressora, por exemplo 192.168.0.50.','err');return}
-  saveSettings();if(location.protocol==='https:'){status('Páginas em HTTPS não podem enviar para o IP da impressora (o navegador bloqueia). Use Bluetooth, ou baixe esta página e abra o arquivo no computador para usar o Wi-Fi.','err');return}
-  status('Enviando para '+ip+'…');
-  try{await fetch(`http://${ip}/pstprnt`,{method:'POST',mode:'no-cors',body:S.zpl,headers:{'Content-Type':'text/plain'}});
-    status(`Dados enviados para ${ip}. A impressora não devolve confirmação: confira se a impressão saiu.`,'good')}
-  catch(e){status(`Não houve resposta de ${ip}. Confira se o celular ou PC está na mesma rede Wi-Fi da impressora.`,'err')}
-};
+
+/* ---------- print ---------- */
 const BLE_SVC='38eb4a80-c570-11e3-9507-0002a5d5c51b',BLE_WR='38eb4a82-c570-11e3-9507-0002a5d5c51b';
-let bleChar=null,bleChunk=512;
-$('#bBle').onclick=async()=>{
-  if(!navigator.bluetooth){status(/iPhone|iPad/.test(navigator.userAgent)?'No iPhone, Safari e Chrome não acessam Bluetooth pela web. Use o navegador Bluefy (App Store) ou baixe o PDF de 104 mm.':'Este navegador não acessa Bluetooth pela web. No Android, use o Chrome atualizado.','err');return}
+const isIOS=/iPhone|iPad|iPod/.test(navigator.userAgent)||(navigator.platform==='MacIntel'&&navigator.maxTouchPoints>1);
+let bleChar=null,bleChunk=512,showAll=false;
+async function sendBle(){
   try{
     if(!bleChar||!bleChar.service.device.gatt.connected){
-      status('Escolha a impressora na lista (o nome costuma ser o número de série, como XXZ…).');
-      const dev=await navigator.bluetooth.requestDevice({acceptAllDevices:true,optionalServices:[BLE_SVC]});
+      const req=showAll?{acceptAllDevices:true,optionalServices:[BLE_SVC]}
+        :{filters:[{services:[BLE_SVC]},{namePrefix:'XX'},{namePrefix:'ZQ'},{namePrefix:'Zebra'}],optionalServices:[BLE_SVC]};
+      const dev=await navigator.bluetooth.requestDevice(req);
+      status('Conectando à impressora…');
       const gatt=await dev.gatt.connect();const svc=await gatt.getPrimaryService(BLE_SVC);bleChar=await svc.getCharacteristic(BLE_WR);
     }
     const data=new TextEncoder().encode(S.zpl);const t0=Date.now();let i=0,last=0;
-    $('#bBle').disabled=true;
+    $('#bPrint').disabled=true;
     while(i<data.length){
       const part=data.slice(i,i+bleChunk);
       try{await (bleChar.writeValueWithResponse?bleChar.writeValueWithResponse(part):bleChar.writeValue(part))}
-      catch(err){ // printer refused the chunk size: shrink and retry the same chunk
-        if(bleChunk>20&&i===0){bleChunk=bleChunk>180?180:20;continue}throw err}
+      catch(err){if(bleChunk>20&&i===0){bleChunk=bleChunk>180?180:20;continue}throw err}
       i+=part.length;
-      if(Date.now()-last>400){last=Date.now();const sec=(Date.now()-t0)/1000,rate=i/Math.max(sec,0.1),left=Math.round((data.length-i)/rate);
-        status(`Enviando por Bluetooth… ${Math.round(i/data.length*100)}%`+(sec>2?` · faltam ~${left}s`:''))}
+      if(Date.now()-last>400){last=Date.now();status(`Imprimindo… ${Math.round(i/data.length*100)}%`)}
     }
-    status(`Enviado por Bluetooth em ${Math.round((Date.now()-t0)/1000)}s.`,'good');
+    status('Enviado para a impressora.','good');
   }catch(e){
     bleChar=null;bleChunk=512;
-    if(e&&e.name==='NotFoundError')status('Nenhuma impressora escolhida.','err');
-    else status('Falha no Bluetooth: '+(e&&e.message||e)+'. Confira se a impressora está ligada e com Bluetooth LE ativo.','err');
-  }finally{$('#bBle').disabled=false}
-};
+    if(e&&e.name==='NotFoundError'){
+      if(!showAll){showAll=true;status('A impressora não apareceu? Toque em Imprimir de novo para ver todos os aparelhos Bluetooth.','err')}
+    }else status('Falha na impressão: '+(e&&e.message||e)+'. Confira se a impressora está ligada e perto do celular.','err');
+  }finally{$('#bPrint').disabled=!S.segs.length}
+}
+async function fallbackZpl(){
+  const nm=baseName()+(inFrame?'-zq520-zpl.txt':'-zq520.zpl');
+  const ok=await download(new Blob([S.zpl],{type:'text/plain'}),nm);
+  if(!ok)return;
+  const h=$('#help');h.hidden=false;
+  if(inFrame){$('#helpSteps').firstElementChild.innerHTML='O arquivo foi salvo (como <i>.txt</i>; se o app pedir, renomeie para <i>.zpl</i>).';
+    $('#helpAlt').innerHTML='Para imprimir direto, abra <b>iranblima.github.io/pdf2z</b> no Chrome do Android.';$('#bLink').hidden=true}
+  else if(!isIOS){$('#helpAlt').innerHTML='Este navegador não acessa Bluetooth. No Android, use o Chrome para imprimir direto desta página.';$('#bLink').hidden=true}
+  h.scrollIntoView({behavior:'smooth',block:'nearest'});
+}
+$('#bPrint').onclick=()=>{if(!S.zpl)return;if(!inFrame&&navigator.bluetooth)sendBle();else fallbackZpl()};
+$('#bLink').onclick=async()=>{const u=location.href.split('#')[0];try{await navigator.clipboard.writeText(u);status('Endereço copiado. Cole no Bluefy.','good')}catch(e){status(u)}};
 
-/* ---------- UI wiring ---------- */
-function setMode(m){S.mode=m;$('#mReflow').setAttribute('aria-pressed',m==='reflow');$('#mImage').setAttribute('aria-pressed',m==='image');
-  $('#optReflow').style.display=m==='reflow'?'grid':'none';$('#optImage').style.display=m==='image'?'grid':'none';
-  $('#modeHint').textContent=m==='reflow'?'Extrai o texto do PDF e o reorganiza na largura da bobina, em letra legível. Imagens, tabelas e linhas de assinatura são mantidas.':'Mantém a página como imagem: corta margens, encurta espaços vazios e ajusta à largura. Use para formulários desenhados ou PDFs escaneados.';
-  schedule()}
-$('#mReflow').onclick=()=>setMode('reflow');$('#mImage').onclick=()=>setMode('image');
-ids.filter(i=>i!=='ip').forEach(i=>{const e=$('#'+i);e.addEventListener(e.type==='range'?'input':'change',schedule)});
-['zFit','zReal'].forEach(id=>$('#'+id).onclick=()=>{$('#zFit').setAttribute('aria-pressed',id==='zFit');$('#zReal').setAttribute('aria-pressed',id==='zReal');if(S.segs.length)drawPreview(S.segs,opt())});
-const drop=$('#drop'),fin=$('#fileIn');
-drop.onclick=()=>{closeSheets();fin.click()};$('#topOpen').onclick=()=>fin.click();
+/* ---------- load ---------- */
+const fin=$('#fileIn');
+$('#bLoad').onclick=()=>fin.click();
 fin.onchange=()=>{const f=fin.files[0];if(f)readFile(f);fin.value=''};
 ['dragenter','dragover'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();document.body.classList.add('drop-over')}));
 ['dragleave','drop'].forEach(ev=>document.addEventListener(ev,e=>{e.preventDefault();if(ev==='drop'||!e.relatedTarget)document.body.classList.remove('drop-over')}));
-// sheets (mobile)
-const scrim=$('#scrim');
-function closeSheets(){document.querySelectorAll('.sheet.open').forEach(x=>x.classList.remove('open'));scrim.classList.remove('on')}
-function openSheet(id){const el=$(id);const was=el.classList.contains('open');closeSheets();if(!was){el.classList.add('open');scrim.classList.add('on');$('#toast').classList.remove('on')}}
-$('#openSet').onclick=()=>openSheet('#shSet');$('#openPrint').onclick=()=>openSheet('#shPrint');
-scrim.onclick=closeSheets;document.querySelectorAll('[data-close]').forEach(b=>b.onclick=closeSheets);
-document.addEventListener('keydown',e=>{if(e.key==='Escape')closeSheets()});
 document.addEventListener('drop',e=>{const f=e.dataTransfer&&e.dataTransfer.files[0];if(f)readFile(f)});
-function readFile(f){if(!/pdf$/i.test(f.type)&&!/\.pdf$/i.test(f.name)){status('Escolha um arquivo PDF.','err');return}status('');const r=new FileReader();r.onload=()=>openPdf(new Uint8Array(r.result),f.name);r.readAsArrayBuffer(f)}
-let rz;window.addEventListener('resize',()=>{clearTimeout(rz);rz=setTimeout(()=>{if(S.segs.length)drawPreview(S.segs,opt())},150)});
+function readFile(f){
+  if(!/pdf$/i.test(f.type)&&!/\.pdf$/i.test(f.name)){status('Escolha um arquivo PDF.','err');return}
+  $('#intro').hidden=true;$('#roll').hidden=false;$('#help').hidden=true;$('#bPrint').disabled=true;S.segs=[];S.zpl='';
+  $('#out').innerHTML='';$('#roll').style.setProperty('--pw',Math.round(opt().W*0.62)+'px');
+  const r=new FileReader();r.onload=()=>openPdf(new Uint8Array(r.result),f.name).then(()=>{$('#fileName').hidden=false});r.readAsArrayBuffer(f)}
 
-if(inFrame){$('#frameNote').hidden=false;['#bBle','#bWifi','#bDriver'].forEach(s=>$(s).hidden=true);$('#ip').closest('.ipline').hidden=true;$('#zplLabel').textContent='Baixar ZPL (.txt)';
-  ['#bPdf','#bZpl','#bPng'].forEach(s=>$(s).disabled=true);
-  Promise.resolve(window.claude&&window.claude.use?window.claude.use('downloads'):null).then(d=>{DL=d;if(d)['#bPdf','#bZpl','#bPng'].forEach(s=>$(s).disabled=false);else $('#frameNote').textContent='Nesta visualização não é possível baixar arquivos. Copie o ZPL abaixo ou use a versão em arquivo pdf2z.html.'}).catch(()=>{})}
-
-loadSettings();setMode(S.mode);updateLabels(opt());
-if(!lib){$('#out').innerHTML='<div class="empty">Não foi possível carregar o leitor de PDF. Verifique a conexão com a internet e recarregue a página.</div>';return}
+if(inFrame){Promise.resolve(window.claude&&window.claude.use?window.claude.use('downloads'):null).then(d=>{DL=d}).catch(()=>{})}
+if(!lib){$('#intro').querySelector('p').textContent='Não foi possível carregar o leitor de PDF. Verifique a internet e recarregue a página.';$('#bLoad').disabled=true;return}
 try{lib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'}catch(e){}
-const bin=atob(SAMPLE_B64),u=new Uint8Array(bin.length);for(let i=0;i<bin.length;i++)u[i]=bin.charCodeAt(i);
-openPdf(u,'termo-de-entrega.pdf').then(()=>{$('#fileName').textContent='Exemplo: termo-de-entrega.pdf · abra o seu PDF'});
-window.__zq={S,opt,buildZPL};
+window.__zq={S,opt,readFile};
 })();
 </script>
 
