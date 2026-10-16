@@ -137,7 +137,7 @@ const S={doc:null,name:'',pages:[],mode:'reflow',segs:[],zpl:''};
 
 
 /* ---------- fixed settings ---------- */
-const OPT={mode:'reflow',font:'atk',size:26,imgz:1,justify:true,dropHF:true,trim:true,collapse:true,cols:false,dither:'fs',thr:160,W:832,media:'cont',labelMm:150,dark:0,margin:12};
+const OPT={mode:'reflow',font:'atk',size:26,imgz:1,justify:true,dropHF:true,trim:true,collapse:true,cols:false,dither:'fs',thr:160,W:832,media:'cont',labelMm:150,dark:0,margin:40};
 function opt(){return OPT}
 
 /* ---------- PDF extraction ---------- */
@@ -276,6 +276,14 @@ function buildBlocks(pages,o){
     const sp=[];for(let i=1;i<textLines.length;i++){const d=textLines[i].y-textLines[i-1].y;if(d>0&&Math.abs(textLines[i].size-body)<body*0.15&&Math.abs(textLines[i-1].size-body)<body*0.15)sp.push(d)}
     const lsp=sp.length?pct(sp,0.4):body*1.25;
     const groups=[];for(const im of [...p.images].sort((a,b)=>a.top-b.top)){const g=groups.find(g=>im.top<g.bottom-(Math.min(g.bottom-g.top,im.bottom-im.top))*0.25&&im.bottom>g.top);if(g){g.items.push(im);g.top=Math.min(g.top,im.top);g.bottom=Math.max(g.bottom,im.bottom)}else groups.push({top:im.top,bottom:im.bottom,items:[im]})}
+    // lines that share a center but start at different x form a centered block (e.g. "MINISTÉRIO DA JUSTIÇA E / SEGURANÇA PÚBLICA")
+    const cc=new Map();
+    for(let i=0;i+1<textLines.length;i++){const a=textLines[i],b=textLines[i+1];
+      if(a.cells.length>1||b.cells.length>1)continue;
+      const ca=(a.x0+a.x1)/2,cb=(b.x0+b.x1)/2,dyy=b.y-a.y;
+      if(dyy>0&&dyy<lsp*1.8&&Math.abs(ca-cb)<Math.max(body*0.7,CW*0.012)&&Math.abs(a.x0-b.x0)>body*0.8&&(a.x1-a.x0)<CW*0.8&&(b.x1-b.x0)<CW*0.8){
+        const c=cc.get(a)||{sum:0,n:0,members:[]};if(!cc.has(a)){c.sum+=ca;c.n++;c.members.push(a);cc.set(a,c)}
+        c.sum+=cb;c.n++;c.members.push(b);cc.set(b,c)}}
     const els=[...textLines.map(l=>({k:'line',top:l.top,l})),...groups.map(g=>({k:'img',top:g.top,g})),...p.rules.map(r=>({k:'rule',top:r.top,r}))].sort((a,b)=>a.top-b.top);
     let prevBottom=null;
     for(const e of els){
@@ -297,10 +305,18 @@ function buildBlocks(pages,o){
       // alignment: page-centered, right-aligned, or centered under/over a logo (header blocks)
       const lcx=(l.x0+l.x1)/2,lw=l.x1-l.x0;let align='left',anchor=0;
       const besideImg=p.images.some(im=>l.top<im.bottom&&l.bottom>im.top&&l.x0>=im.x1-2); // text sitting to the right of a logo
-      const under=lw<CW*0.6?p.images.find(im=>{const icx=(im.x0+im.x1)/2;return Math.abs(icx-lcx)<Math.max(CW*0.025,(im.x1-im.x0)*0.15)&&l.top>im.top-body*10&&l.top<im.bottom+body*10&&Math.abs(icx-p.w/2)>CW*0.1}):null;
-      if(under){align='anchor';anchor=((under.x0+under.x1)/2-L)/CW}
+      const grp=cc.get(l);const gcx=grp?grp.sum/grp.n:lcx;
+      const nearImg=(cx,tol,dist)=>p.images.find(im=>{const icx=(im.x0+im.x1)/2;return Math.abs(icx-cx)<tol(im)&&l.top>im.top-body*dist&&l.top<im.bottom+body*dist&&Math.abs(icx-p.w/2)>CW*0.1});
+      let under=null;
+      if(grp)under=nearImg(gcx,im=>Math.max(CW*0.08,(im.x1-im.x0)*0.6),30);
+      else if(lw<CW*0.6)under=nearImg(lcx,im=>Math.max(CW*0.025,(im.x1-im.x0)*0.15),10);
+      if(under){align='center'}
+      else if(grp&&!besideImg){
+        if(Math.abs(gcx-mid)<CW*0.05||Math.abs(gcx-p.w/2)<CW*0.05)align='center';
+        else align='center';
+      }
       else if(!besideImg&&l.x0>L+CW*0.04&&lw<CW*0.9){
-        if(Math.abs(lcx-mid)<CW*0.025||Math.abs(lcx-p.w/2)<CW*0.025)align='center';
+        if(Math.abs(lcx-mid)<CW*0.05||Math.abs(lcx-p.w/2)<CW*0.05)align='center';
         else if(Math.abs(l.x1-R)<CW*0.03&&l.x0>L+CW*0.3)align='right';
       }
       const centered=align!=='left';
